@@ -19,9 +19,9 @@
  */
 
 
-import Hex from "@lapo/asn1js/hex";
-import Base64 from "@lapo/asn1js/base64";
-import ASN1 from "@lapo/asn1js";
+import { Hex } from "@lapo/asn1js/hex";
+import { Base64 } from "@lapo/asn1js/base64";
+import { ASN1 } from "@lapo/asn1js";
 import {SES_Signature_Verify} from "@/utils/ofd/verify_signature_util";
 import {digestByteArray} from "@/utils/ofd/verify_signature_util";
 let reHex = /^\s*(?:[0-9A-Fa-f][0-9A-Fa-f]\s*)+$/;

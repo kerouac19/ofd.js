@@ -26,7 +26,7 @@ import {
     unzipOfd
 } from "@/utils/ofd/ofd_parser";
 import {digestCheckProcess} from "@/utils/ofd/ses_signature_parser"
-import {getPageScal, setPageScal} from "@/utils/ofd/ofd_util";
+import {getPageScale as _getPageScale, setPageScale as _setPageScale, replaceFirstSlash, pushScaleContext, popScaleContext} from "@/utils/ofd/ofd_util";
 import * as JSZipUtils from "jszip-utils";
 
 export const parseOfdDocument = function (options) {
@@ -47,7 +47,6 @@ export const parseOfdDocument = function (options) {
 }
 
 const doParseOFD = function (options) {
-    global.xmlParseFlag = 0;
     pipeline.call(this, async () => await unzipOfd(options.ofd), getDocRoots, parseSingleDoc)
         .then(res => {
             if (options.success) {
@@ -67,14 +66,19 @@ export const renderOfd = function (screenWidth, ofd) {
     if (!ofd) {
         return divArray;
     }
-    for (const page of ofd.pages) {
-        let box = calPageBox(screenWidth, ofd.document, page);
-        const pageId = Object.keys(page)[0];
-        let pageDiv = document.createElement('div');
-        pageDiv.id = pageId;
-        pageDiv.setAttribute('style', `margin-bottom: 20px;position: relative;width:${box.w}px;height:${box.h}px;background: white;`)
-        renderPage(pageDiv, page, ofd.tpls, ofd.fontResObj, ofd.drawParamResObj, ofd.multiMediaResObj);
-        divArray.push(pageDiv);
+    pushScaleContext();
+    try {
+        for (const page of ofd.pages) {
+            let box = calPageBox(screenWidth, ofd.document, page);
+            const pageId = Object.keys(page)[0];
+            let pageDiv = document.createElement('div');
+            pageDiv.id = pageId;
+            pageDiv.setAttribute('style', `margin-bottom: 20px;position: relative;width:${box.w}px;height:${box.h}px;background: white;`)
+            renderPage(pageDiv, page, ofd.tpls, ofd.fontResObj, ofd.drawParamResObj, ofd.multiMediaResObj);
+            divArray.push(pageDiv);
+        }
+    } finally {
+        popScaleContext();
     }
     return divArray;
 }
@@ -84,14 +88,19 @@ export const renderOfdByScale = function (ofd) {
     if (!ofd) {
         return divArray;
     }
-    for (const page of ofd.pages) {
-        let box = calPageBoxScale(ofd.document, page);
-        const pageId = Object.keys(page)[0];
-        let pageDiv = document.createElement('div');
-        pageDiv.id = pageId;
-        pageDiv.setAttribute('style', `margin-bottom: 20px;position: relative;width:${box.w}px;height:${box.h}px;background: white;`)
-        renderPage(pageDiv, page, ofd.tpls, ofd.fontResObj, ofd.drawParamResObj, ofd.multiMediaResObj);
-        divArray.push(pageDiv);
+    pushScaleContext();
+    try {
+        for (const page of ofd.pages) {
+            let box = calPageBoxScale(ofd.document, page);
+            const pageId = Object.keys(page)[0];
+            let pageDiv = document.createElement('div');
+            pageDiv.id = pageId;
+            pageDiv.setAttribute('style', `margin-bottom: 20px;position: relative;width:${box.w}px;height:${box.h}px;background: white;`)
+            renderPage(pageDiv, page, ofd.tpls, ofd.fontResObj, ofd.drawParamResObj, ofd.multiMediaResObj);
+            divArray.push(pageDiv);
+        }
+    } finally {
+        popScaleContext();
     }
     return divArray;
 }
@@ -107,12 +116,24 @@ export const digestCheck = function (options) {
 }
 
 export const setPageScale = function (scale) {
-    setPageScal(scale);
+    _setPageScale(scale);
 }
 
 export const getPageScale = function () {
-    return getPageScal();
+    return _getPageScale();
 }
 
-export { calPageBox, calPageBoxScale, renderPage }
+export const extractAttachment = async function (ofd, attachment) {
+    if (!ofd || !ofd.zip || !attachment || !attachment.fileLoc) return null;
+    let fileLoc = replaceFirstSlash(attachment.fileLoc);
+    if (fileLoc.indexOf(ofd.doc) === -1) {
+        fileLoc = `${ofd.doc}/${fileLoc}`;
+    }
+    if (ofd.zip.files[fileLoc]) {
+        return ofd.zip.files[fileLoc].async('uint8array');
+    }
+    return null;
+}
+
+export { calPageBox, calPageBoxScale, renderPage, pushScaleContext, popScaleContext }
 
